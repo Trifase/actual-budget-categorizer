@@ -1,0 +1,15 @@
+{
+    "name": "actual-budget-auto-categorize",
+    "version": "1.0.0",
+    "description": "Auto-categorize transactions in Actual Budget using AI",
+    "main": "src/index.js",
+    "type": "module",
+    "scripts": {
+        "start": "node src/index.js",
+        "dry-run": "node src/index.js --dry-run"
+    },
+    "dependencies": {
+        "@actual-app/api": "latest",
+        "openai": "^4.77.0"
+    }
+}

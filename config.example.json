@@ -1,0 +1,12 @@
+{
+    "actualServer": "http://actualbudgeturl:5006",
+    "actualPassword": "MyPassword123",
+    "budgetSyncId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    "budgetPassword": null,
+    "openaiApiKey": "sk-openai-api-key",
+    "openaiModel": "gpt-4o-mini",
+    "dryRun": false,
+    "createRules": false,
+    "minConfidence": 0.85,
+    "limit": null
+}

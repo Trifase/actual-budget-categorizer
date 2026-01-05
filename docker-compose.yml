@@ -1,0 +1,10 @@
+services:
+  categorizer:
+    build: .
+    volumes:
+      - ./config.json:/app/config.json:ro
+    # Add to the same network as Actual Budget if needed
+    # network_mode: "host"
+    # Or use a named network:
+    # networks:
+    #   - actual-network
