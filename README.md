@@ -34,7 +34,7 @@ Create `config.json` with your Actual Budget details:
 
 ```bash
 # Export your categorized transactions
-docker compose run --rm categorizer node src/export-training-data.js > trainer/training_data.json
+docker compose run --rm categorizer node src/export-training-data.js
 
 # Train the model (requires UV)
 cd trainer
@@ -84,7 +84,7 @@ The local classifier uses scikit-learn (TF-IDF + Naive Bayes) trained on your ex
 **Retrain periodically** as you categorize more transactions:
 
 ```bash
-docker compose run --rm categorizer node src/export-training-data.js > trainer/training_data.json
+docker compose run --rm categorizer node src/export-training-data.js
 cd trainer && uv run python -m trainer.train
 ```
 

@@ -2,11 +2,16 @@
 
 /**
  * Export categorized transactions from Actual Budget for ML training.
- * Outputs JSON to stdout.
+ * Writes JSON directly to trainer/training_data.json.
  */
 
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { ActualClient } from './actual-client.js';
 import { loadConfig } from './utils.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 async function main() {
     const config = loadConfig();
@@ -63,8 +68,11 @@ async function main() {
             transactions: allTransactions,
         };
 
-        // Output as JSON to stdout
-        console.log(JSON.stringify(output));
+        // Write directly to file
+        const outputPath = path.join(__dirname, '..', 'trainer', 'training_data.json');
+        fs.writeFileSync(outputPath, JSON.stringify(output, null, 2), 'utf-8');
+
+        console.log(`✅ Exported ${allTransactions.length} transactions to ${outputPath}`);
 
     } finally {
         await client.disconnect();
@@ -72,6 +80,6 @@ async function main() {
 }
 
 main().catch(err => {
-    console.error(JSON.stringify({ error: err.message }));
+    console.error('❌ Export failed:', err.message);
     process.exit(1);
 });
