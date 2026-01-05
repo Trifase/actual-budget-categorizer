@@ -27,8 +27,11 @@ def load_data(data_file: Path) -> tuple[list[dict], dict]:
     
     category_map = {cat['id']: cat['name'] for cat in data['categories']}
     
-    # Filter to only categorized transactions
-    categorized = [tx for tx in data['transactions'] if tx.get('category')]
+    # Filter to only categorized transactions with valid (existing) categories
+    categorized = [
+        tx for tx in data['transactions'] 
+        if tx.get('category') and tx['category'] in category_map
+    ]
     
     return categorized, category_map
 
