@@ -85,7 +85,7 @@ export class ActualClient {
             .toISOString()
             .split('T')[0];
         for (const account of accounts) {
-            if (account.closed) continue;
+            if (account.closed || account.offbudget) continue;
             const transactions = await this.getTransactions(
                 account.id,
                 startDate,
