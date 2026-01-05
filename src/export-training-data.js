@@ -36,7 +36,8 @@ async function main() {
         const allTransactions = [];
 
         for (const account of accounts) {
-            if (account.closed) continue;
+            // Skip closed and off-budget accounts
+            if (account.closed || account.offbudget) continue;
 
             const transactions = await client.getTransactions(
                 account.id,
