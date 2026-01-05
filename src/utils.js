@@ -32,6 +32,7 @@ export function parseArgs() {
         dryRun: false,
         limit: null,
         createRules: false,
+        useOpenai: false,
     };
     for (let i = 0; i < args.length; i++) {
         switch (args[i]) {
@@ -47,6 +48,10 @@ export function parseArgs() {
             case '-r':
                 options.createRules = true;
                 break;
+            case '--openai':
+            case '-o':
+                options.useOpenai = true;
+                break;
             case '--help':
             case '-h':
                 console.log(`
@@ -56,6 +61,7 @@ Options:
   --dry-run, -d       Show what would be done without making changes
   --limit N, -l N     Only process N transactions
   --create-rules, -r  Create rules for future auto-categorization
+  --openai, -o        Use OpenAI instead of local classifier
   --help, -h          Show this help message
 `);
                 process.exit(0);

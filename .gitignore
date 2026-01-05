@@ -2,3 +2,9 @@ node_modules/
 config.json
 .actual-cache/
 package-lock.json
+training_data.json
+model.joblib
+categories.json
+uv.lock
+.venv/
+__pycache__/

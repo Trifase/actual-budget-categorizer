@@ -1,113 +1,126 @@
 # Actual Budget Auto-Categorizer
 
-Automatically categorize uncategorized transactions in [Actual Budget](https://actualbudget.org) using AI (OpenAI GPT-4o-mini).
+Automatically categorize uncategorized transactions in [Actual Budget](https://actualbudget.org) using a **local ML classifier** (trained on your own data) or optionally OpenAI.
 
-## Setup
+## Features
 
-### Option A: Docker (Recommended)
+- 🤖 **Local ML Classifier** - Train on your own transactions, no API costs
+- 🌐 **OpenAI Fallback** - Use GPT-4o-mini when needed with `--openai` flag
+- 🔒 **Dry-run Mode** - Preview changes before applying
+- 📝 **Confidence Tracking** - Adds `[AI: XX%]` to transaction notes
+- 📋 **Auto-rules** - Optionally create rules for future transactions
 
-Since Actual Budget uses native modules that can be tricky to build on Windows, Docker is the easiest approach.
+## Quick Start
 
-**1. Create your config file:**
+### 1. Configure
 
-```bash
-cp config.example.json config.json
+Create `config.json` with your Actual Budget details:
+
+```json
+{
+  "actualServer": "http://your-server:5006",
+  "actualPassword": "your-password",
+  "budgetSyncId": "your-sync-id",
+  "budgetPassword": null,
+  "openaiApiKey": "sk-...",
+  "dryRun": false,
+  "minConfidence": 0.85
+}
 ```
 
-Edit `config.json` with your details (see Configuration section below).
+**Find your Sync ID:** Actual Budget → Settings → Show advanced settings → Sync ID
 
-**2. Build and run:**
+### 2. Train the Local Classifier
 
 ```bash
-# Dry run (preview changes)
+# Export your categorized transactions
+docker compose run --rm categorizer node src/export-training-data.js > trainer/training_data.json
+
+# Train the model (requires UV)
+cd trainer
+uv run python -m trainer.train
+```
+
+### 3. Run
+
+```bash
+# Preview changes (dry-run)
 docker compose run --rm categorizer node src/index.js --dry-run
 
 # Apply categorizations
-docker compose run --rm categorizer
+docker compose run --rm categorizer node src/index.js
 
-# With options
-docker compose run --rm categorizer node src/index.js --limit 5 --dry-run
+# Use OpenAI instead of local classifier
+docker compose run --rm categorizer node src/index.js --openai
 ```
 
-### Option B: Native Node.js (requires Node 18-22)
+## Command Line Options
 
-If you have Node.js 18-22 with build tools installed:
-
-```bash
-npm install
-npm run dry-run
-```
-
-**Where to find the Sync ID:**
-1. Open Actual Budget
-2. Go to Settings → Show advanced settings
-3. Copy the "Sync ID"
-
-**If you have end-to-end encryption enabled**, also set `budgetPassword` to your encryption password.
-
-## Usage
-
-### Dry Run (safe - no changes)
-
-```bash
-npm run dry-run
-# or
-node src/index.js --dry-run
-```
-
-### Apply Categorizations
-
-```bash
-npm start
-# or
-node src/index.js
-```
-
-### Options
-
-```
---dry-run, -d       Show what would be done without making changes
---limit N, -l N     Only process N transactions
---create-rules, -r  Create rules for future auto-categorization
---help, -h          Show help
-```
-
-### Examples
-
-```bash
-# Preview what would happen
-node src/index.js --dry-run
-
-# Process only 5 transactions as a test
-node src/index.js --dry-run --limit 5
-
-# Apply to 1 transaction only
-node src/index.js --limit 1
-
-# Apply all and create rules for future imports
-node src/index.js --create-rules
-```
+| Option | Description |
+|--------|-------------|
+| `--dry-run`, `-d` | Preview changes without applying |
+| `--limit N`, `-l N` | Only process N transactions |
+| `--openai`, `-o` | Use OpenAI instead of local classifier |
+| `--create-rules`, `-r` | Create rules for future auto-categorization |
+| `--help`, `-h` | Show help |
 
 ## How It Works
 
 1. Connects to your Actual Budget server via the official API
-2. Fetches all uncategorized transactions from the last 2 years
-3. Sends transaction details (payee, amount, notes) to OpenAI
-4. OpenAI suggests a category from your existing categories
-5. Updates transactions that have a confidence score above the threshold
-6. Optionally creates rules to auto-categorize future transactions
+2. Fetches all uncategorized transactions
+3. Analyzes using local ML classifier (or OpenAI with `--openai`)
+4. Updates transactions above the confidence threshold
+5. Appends `[AI: XX%]` to transaction notes
 
-## Configuration Options
+## Training the Local Classifier
+
+The local classifier uses scikit-learn (TF-IDF + Naive Bayes) trained on your existing categorized transactions.
+
+**Features used for classification:**
+- Payee name
+- Transaction notes
+- Amount type (expense/income)
+
+**Retrain periodically** as you categorize more transactions:
+
+```bash
+docker compose run --rm categorizer node src/export-training-data.js > trainer/training_data.json
+cd trainer && uv run python -m trainer.train
+```
+
+## Configuration
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `actualServer` | URL of your Actual Budget server | - |
-| `actualPassword` | Your Actual server password | - |
-| `budgetSyncId` | Sync ID from Settings | - |
-| `budgetPassword` | E2E encryption password (if enabled) | `null` |
-| `openaiApiKey` | Your OpenAI API key | - |
+| `actualServer` | URL of your Actual Budget server | Required |
+| `actualPassword` | Your Actual server password | Required |
+| `budgetSyncId` | Sync ID from Settings | Required |
+| `budgetPassword` | E2E encryption password | `null` |
+| `openaiApiKey` | OpenAI API key (for `--openai` flag) | Optional |
 | `openaiModel` | OpenAI model to use | `gpt-4o-mini` |
 | `dryRun` | Default dry-run mode | `false` |
+| `minConfidence` | Min confidence to apply (0-1) | `0.85` |
 | `createRules` | Create rules for payees | `false` |
-| `minConfidence` | Min confidence to apply category (0-1) | `0.85` |
-| `limit` | Max transactions to process | `null` (all) |
+| `limit` | Max transactions to process | `null` |
+
+## Project Structure
+
+```
+├── src/
+│   ├── index.js              # Main entry point
+│   ├── actual-client.js      # Actual Budget API wrapper
+│   ├── categorizer.js        # OpenAI categorizer
+│   ├── local-categorizer.js  # Local ML categorizer
+│   └── export-training-data.js
+├── trainer/
+│   ├── pyproject.toml        # UV/Python config
+│   ├── trainer/
+│   │   ├── train.py          # Training script
+│   │   ├── predict.py        # Prediction module
+│   │   └── export.py
+│   ├── model.joblib          # Trained model (generated)
+│   └── training_data.json    # Exported transactions (generated)
+├── Dockerfile
+├── docker-compose.yml
+└── config.json               # Your configuration (gitignored)
+```

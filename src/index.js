@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { ActualClient } from './actual-client.js';
 import { Categorizer } from './categorizer.js';
+import { LocalCategorizer } from './local-categorizer.js';
 import { loadConfig, parseArgs, formatAmount, formatDate } from './utils.js';
 async function main() {
     const cliOptions = parseArgs();
@@ -12,6 +13,7 @@ async function main() {
         limit: cliOptions.limit || config.limit,
         createRules: cliOptions.createRules || config.createRules,
         minConfidence: config.minConfidence || 0.85,
+        useOpenai: cliOptions.useOpenai || false,
     };
     if (options.dryRun) {
         console.log('🔍 DRY RUN MODE - No changes will be made\n');
@@ -31,10 +33,24 @@ async function main() {
             return;
         }
         console.log(`📝 Found ${transactions.length} uncategorized transaction(s)\n`);
-        // Initialize categorizer
-        const categorizer = new Categorizer(config, categories);
-        // Categorize transactions
-        console.log('🤖 Analyzing transactions with AI...\n');
+        // Initialize categorizer (local by default, OpenAI with --openai flag)
+        let categorizer;
+        if (options.useOpenai) {
+            if (!config.openaiApiKey || config.openaiApiKey.includes('YOUR_')) {
+                console.error('❌ OpenAI API key not configured. Set openaiApiKey in config.json');
+                process.exit(1);
+            }
+            console.log('🤖 Analyzing transactions with OpenAI...\n');
+            categorizer = new Categorizer(config, categories);
+        } else {
+            console.log('🤖 Analyzing transactions with local classifier...\n');
+            categorizer = new LocalCategorizer(config, categories);
+            if (!categorizer.isModelAvailable()) {
+                console.error('❌ Local model not found. Train it first or use --openai flag.');
+                console.error('   To train: cd trainer && uv run python -m trainer.export && uv run python -m trainer.train');
+                process.exit(1);
+            }
+        }
         const results = await categorizer.categorizeBatch(transactions);
         // Process results
         let categorized = 0;
@@ -46,7 +62,7 @@ async function main() {
             const amount = formatAmount(transaction.amount);
             const date = formatDate(transaction.date);
             if (!suggestedCategory || confidence < options.minConfidence) {
-                console.log(`⏭️  Skip: "${payee}" (${amount}) - Low confidence: ${(confidence * 100).toFixed(0)}%`);
+                console.log(`⏭️  Skip: "${payee}" (${amount}) - Low confidence: [${suggestedCategory.name}] ${(confidence * 100).toFixed(0)}%`);
                 skipped++;
                 continue;
             }
